@@ -1,0 +1,112 @@
+Comandos utilizados, práctica laboratorio 6.1:
+Seguridad en Linux
+
+CIFRADO GPG2
+
+============================================
+
+# INSTALAR GPG2
+
+sudo dnf install gnupg2 -y
+
+------------------------------------------------------------
+
+# CREAR DIRECTORIO Y ARCHIVO
+
+cd ~/Desktop
+
+mkdir cifrado
+cd cifrado
+
+echo "Hola Mundo - Prueba de cifrado" > archivo.txt
+
+------------------------------------------------------------
+
+# VERIFICAR ARCHIVO
+
+ls -l
+cat archivo.txt
+
+------------------------------------------------------------
+
+# CIFRAR ARCHIVO (MODO SIMÉTRICO)
+
+gpg2 -c archivo.txt
+
+# Se pedirá una contraseña (escribirla 2 veces)
+
+# Se generará:
+# archivo.txt.gpg
+
+------------------------------------------------------------
+
+# VERIFICAR ARCHIVO CIFRADO
+
+ls
+
+# Debe aparecer:
+# archivo.txt
+# archivo.txt.gpg
+
+------------------------------------------------------------
+
+# INTENTAR LEER ARCHIVO CIFRADO
+
+cat archivo.txt.gpg
+
+# RESULTADO:
+# No será legible (texto encriptado)
+
+------------------------------------------------------------
+
+# DESCIFRAR ARCHIVO
+
+gpg2 -d archivo.txt.gpg
+
+# Ingresar la contraseña usada anteriormente
+
+# RESULTADO:
+# Se muestra el contenido original:
+# Hola Mundo - Prueba de cifrado
+
+------------------------------------------------------------
+
+# (OPCIONAL) GUARDAR ARCHIVO DESCIFRADO
+
+gpg2 -o archivo_descifrado.txt -d archivo.txt.gpg
+
+# Verificar:
+
+cat archivo_descifrado.txt
+
+------------------------------------------------------------
+
+# COMANDOS CLAVE
+
+gpg2 -c archivo.txt        → cifrar archivo
+gpg2 -d archivo.txt.gpg   → descifrar archivo
+gpg2 -o archivo -d        → guardar descifrado
+
+------------------------------------------------------------
+
+# NOTAS IMPORTANTES
+
+# - gpg2 -c usa cifrado simétrico (contraseña)
+# - El archivo original NO se elimina automáticamente
+# - El archivo cifrado termina en .gpg
+# - La contraseña es necesaria para descifrar
+
+------------------------------------------------------------
+
+# ERRORES COMUNES
+
+# Si el archivo no se cifra:
+verificar nombre correcto (archivo.txt)
+
+# Si no descifra:
+verificar contraseña
+
+# Si no existe gpg2:
+sudo dnf install gnupg2 -y
+
+------------------------------------------------------------
