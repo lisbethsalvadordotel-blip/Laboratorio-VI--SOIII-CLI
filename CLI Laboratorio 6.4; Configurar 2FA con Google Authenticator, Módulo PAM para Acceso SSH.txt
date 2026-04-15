@@ -1,0 +1,136 @@
+Comandos utilizados, práctica laboratorio 6.4:
+Seguridad en Linux
+
+CONFIGURAR 2FA CON GOOGLE AUTHENTICATOR (PAM + SSH)
+
+============================================
+
+# INSTALAR SSH
+
+sudo dnf install openssh-server -y
+sudo systemctl start sshd
+sudo systemctl enable sshd
+sudo systemctl status sshd
+
+------------------------------------------------------------
+
+# INSTALAR GOOGLE AUTHENTICATOR
+
+sudo dnf install epel-release -y
+sudo dnf install google-authenticator qrencode -y
+
+------------------------------------------------------------
+
+# CONFIGURAR GOOGLE AUTHENTICATOR (EJECUTAR COMO USUARIO)
+
+google-authenticator
+
+# RESPONDER:
+# - Yes (time-based tokens)
+# - Yes (update file)
+# - Yes (disallow multiple uses)
+# - Yes (increase security)
+# - Yes (rate limiting)
+
+# RESULTADO:
+# - Se genera un código QR
+# - Escanearlo con la app Google Authenticator (celular)
+
+------------------------------------------------------------
+
+# CONFIGURAR PAM
+
+sudo nano /etc/pam.d/sshd
+
+# AGREGAR ESTA LÍNEA AL FINAL:
+
+auth required pam_google_authenticator.so
+
+------------------------------------------------------------
+
+# CONFIGURAR SSH
+
+sudo nano /etc/ssh/sshd_config
+
+# VERIFICAR O AGREGAR:
+
+PasswordAuthentication yes
+ChallengeResponseAuthentication yes
+UsePAM yes
+
+------------------------------------------------------------
+
+# (OPCIONAL PERO RECOMENDADO - SELINUX)
+
+# Ajustar contexto del archivo
+
+sudo restorecon -Rv /home/usuario
+
+# Ajustar permisos del archivo generado
+
+chmod 600 /home/usuario/.google_authenticator
+
+------------------------------------------------------------
+
+# REINICIAR SSH
+
+sudo systemctl restart sshd
+
+------------------------------------------------------------
+
+# PRUEBA DESDE LA MÁQUINA HOST
+
+ssh usuario@IP_DEL_SERVIDOR
+
+# EJEMPLO:
+ssh lis@192.168.100.17
+
+------------------------------------------------------------
+
+# RESULTADO ESPERADO
+
+# El sistema pedirá:
+
+Password:
+Verification code:
+
+# 1. Ingresar contraseña del usuario
+# 2. Ingresar código de Google Authenticator (celular)
+
+# Si todo es correcto → acceso permitido
+
+------------------------------------------------------------
+
+# COMANDOS CLAVE
+
+google-authenticator
+sudo nano /etc/pam.d/sshd
+sudo nano /etc/ssh/sshd_config
+sudo systemctl restart sshd
+
+------------------------------------------------------------
+
+# NOTAS IMPORTANTES
+
+# - El QR se escanea con la app Google Authenticator
+# - El código cambia cada pocos segundos
+# - Se requiere contraseña + código (doble factor)
+# - El archivo .google_authenticator es clave
+
+------------------------------------------------------------
+
+# ERRORES COMUNES
+
+# Si no pide código:
+revisar /etc/pam.d/sshd
+
+# Si no conecta:
+sudo systemctl status sshd
+
+# Si falla autenticación:
+verificar QR escaneado correctamente
+
+# Si se bloquea el acceso:
+revisar configuración de sshd_config
+
+------------------------------------------------------------
