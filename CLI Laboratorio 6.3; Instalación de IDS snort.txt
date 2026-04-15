@@ -1,0 +1,247 @@
+Comandos utilizados, práctica laboratorio 6.3:
+Seguridad en Linux
+
+INSTALACIÓN DE IDS SNORT
+
+============================================
+
+# Actualizar el sistema
+
+sudo dnf update -y
+
+------------------------------------------------------------
+
+# Habilitar repositorios necesarios
+
+sudo dnf install epel-release -y
+sudo dnf config-manager --set-enabled crb
+
+------------------------------------------------------------
+
+# Configurar rutas de librerías
+
+sudo nano /etc/ld.so.conf.d/local.conf
+
+# Agregar:
+# /usr/local/lib
+# /usr/local/lib64
+
+# Guardar y salir, luego actualizar caché:
+
+sudo ldconfig
+
+------------------------------------------------------------
+
+# Instalar dependencias necesarias
+
+sudo dnf install -y flex bison gcc gcc-c++ make cmake autoconf libtool git nano unzip wget \
+libpcap-devel pcre-devel hwloc-devel openssl-devel zlib-devel luajit-devel \
+pkgconfig pkgconf libunwind-devel libnfnetlink-devel libnetfilter_queue-devel \
+libmnl-devel xz-devel gperftools libuuid-devel hyperscan hyperscan-devel \
+pcre2 pcre2-devel
+
+------------------------------------------------------------
+
+# Instalar libdnet
+
+cd ~
+git clone https://github.com/dugsong/libdnet.git
+cd libdnet
+./configure --without-check
+make
+sudo make install
+sudo ldconfig
+cd ~
+
+------------------------------------------------------------
+
+# Instalar libdaq
+
+git clone https://github.com/snort3/libdaq.git
+cd libdaq
+./bootstrap
+./configure
+make
+sudo make install
+sudo ldconfig
+cd ~
+
+------------------------------------------------------------
+
+# Instalar Snort 3
+
+git clone https://github.com/snort3/snort3.git
+cd snort3
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:$PKG_CONFIG_PATH
+export CFLAGS="-O3"
+export CXXFLAGS="-O3 -fno-rtti"
+
+./configure_cmake.sh --prefix=/usr/local/snort --enable-tcmalloc
+cd build
+make -j$(nproc)
+sudo make install
+cd ~
+sudo ldconfig
+
+------------------------------------------------------------
+
+# Crear enlace simbólico para ejecutar snort desde cualquier ruta
+
+sudo ln -s /usr/local/snort/bin/snort /usr/bin/snort
+
+------------------------------------------------------------
+
+# Verificar instalación
+
+snort -V
+
+------------------------------------------------------------
+
+# Configurar red local en snort.lua
+
+sudo nano /usr/local/snort/etc/snort/snort.lua
+
+# Buscar la variable HOME_NET y cambiarla por la IP/red de la máquina donde está Snort
+
+# EJEMPLO:
+HOME_NET = '192.168.100.17/24'
+
+# NOTA:
+# Si Snort está en otra VM, usar la IP real de esa VM
+
+------------------------------------------------------------
+
+# Validar sintaxis de configuración
+
+snort -T -c /usr/local/snort/etc/snort/snort.lua
+
+------------------------------------------------------------
+
+# Activar modo promiscuo en la interfaz de red
+
+sudo ip link set dev ens160 promisc on
+
+# NOTA:
+# Si la interfaz no es ens160, verificar con:
+ip a
+
+------------------------------------------------------------
+
+# Crear archivo de reglas locales
+
+sudo nano /usr/local/snort/etc/snort/local.rules
+
+# Agregar las reglas:
+
+alert icmp any any -> $HOME_NET any (msg:"ICMP Traffic Detected"; sid:10000001; rev:1;)
+alert tcp any any -> $HOME_NET 21 (msg:"FTP Traffic Detected on Port 21"; sid:10000002; rev:1;)
+alert tcp any any -> $HOME_NET 22 (msg:"SSH Traffic Detected on Port 22"; sid:10000003; rev:1;)
+alert tcp any any -> $HOME_NET 80 (msg:"HTTP Traffic Detected on Port 80"; sid:10000004; rev:1;)
+
+------------------------------------------------------------
+
+# Ejecutar Snort con las reglas creadas
+
+sudo snort -c /usr/local/snort/etc/snort/snort.lua \
+-R /usr/local/snort/etc/snort/local.rules \
+-i ens160 -A alert_fast -s 65535 -k none
+
+------------------------------------------------------------
+
+# PRUEBAS DESDE LA MÁQUINA HOST
+
+# 1. Probar detección ICMP
+ping IP_DEL_SERVIDOR_SNORT
+
+# EJEMPLO:
+ping 192.168.100.17
+
+# Debe aparecer alerta:
+# ICMP Traffic Detected
+
+------------------------------------------------------------
+
+# 2. Probar detección hacia puerto 21 (FTP)
+
+ftp IP_DEL_SERVIDOR_SNORT
+
+# EJEMPLO:
+ftp 192.168.100.17
+
+# Debe aparecer alerta:
+# FTP Traffic Detected on Port 21
+
+------------------------------------------------------------
+
+# 3. Probar detección hacia puerto 22 (SSH)
+
+ssh usuario@IP_DEL_SERVIDOR_SNORT
+
+# EJEMPLO:
+ssh lis@192.168.100.17
+
+# Debe aparecer alerta:
+# SSH Traffic Detected on Port 22
+
+------------------------------------------------------------
+
+# 4. Probar detección hacia puerto 80 (HTTP)
+
+# Desde navegador o con curl:
+curl http://IP_DEL_SERVIDOR_SNORT
+
+# EJEMPLO:
+curl http://192.168.100.17
+
+# Debe aparecer alerta:
+# HTTP Traffic Detected on Port 80
+
+------------------------------------------------------------
+
+# RESULTADO ESPERADO
+
+# Al generar tráfico desde la máquina host,
+# Snort debe mostrar en pantalla las alertas correspondientes
+# según cada regla configurada.
+
+------------------------------------------------------------
+
+# COMANDOS CLAVE
+
+snort -V
+snort -T -c /usr/local/snort/etc/snort/snort.lua
+ip a
+ping IP
+ftp IP
+ssh usuario@IP
+curl http://IP
+
+------------------------------------------------------------
+
+# NOTAS IMPORTANTES
+
+# - Snort debe ejecutarse sobre la interfaz correcta
+# - HOME_NET debe coincidir con la red/IP del servidor Snort
+# - El modo promiscuo ayuda a capturar el tráfico
+# - Las reglas locales deben estar bien escritas
+# - Cada regla debe tener un SID único
+
+------------------------------------------------------------
+
+# ERRORES COMUNES
+
+# Si snort no ejecuta:
+snort -V
+
+# Si falla la configuración:
+snort -T -c /usr/local/snort/etc/snort/snort.lua
+
+# Si no detecta tráfico:
+verificar interfaz con ip a
+verificar HOME_NET
+verificar modo promiscuo
+
+# Si ens160 no existe:
+usar el nombre real de la interfaz
