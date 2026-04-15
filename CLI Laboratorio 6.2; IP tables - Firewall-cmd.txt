@@ -1,0 +1,189 @@
+Comandos utilizados, práctica laboratorio 6.2:
+Seguridad en Linux
+
+IPTABLES - FIREWALL-CMD
+
+============================================
+
+# Instalar los servicios HTTP, FTP y SSH
+
+sudo dnf install httpd vsftpd openssh-server -y
+
+------------------------------------------------------------
+
+# Iniciar y habilitar los servicios
+
+sudo systemctl start httpd
+sudo systemctl start vsftpd
+sudo systemctl start sshd
+
+sudo systemctl enable httpd
+sudo systemctl enable vsftpd
+sudo systemctl enable sshd
+
+------------------------------------------------------------
+
+# Verificar que los servicios estén activos
+
+sudo systemctl status httpd
+sudo systemctl status vsftpd
+sudo systemctl status sshd
+
+------------------------------------------------------------
+
+# Verificar puertos en escucha
+
+ss -tuln | grep -E '80|21|22'
+
+------------------------------------------------------------
+
+# PRUEBAS INICIALES (ANTES DE BLOQUEAR)
+
+# HTTP:
+# Abrir en navegador:
+http://IP_DEL_SERVIDOR
+
+# SSH:
+ssh usuario@IP_DEL_SERVIDOR
+
+# FTP:
+ftp IP_DEL_SERVIDOR
+
+# EJEMPLO:
+ftp 192.168.100.17
+
+# RESULTADO:
+# Debe conectar y pedir usuario/contraseña
+
+------------------------------------------------------------
+# PARTE 1: IPTABLES
+------------------------------------------------------------
+
+# Detener firewalld
+
+sudo systemctl stop firewalld
+
+------------------------------------------------------------
+
+# BLOQUEAR PUERTOS
+
+sudo iptables -A INPUT -p tcp --dport 80 -j REJECT
+sudo iptables -A INPUT -p tcp --dport 21 -j REJECT
+sudo iptables -A INPUT -p tcp --dport 22 -j REJECT
+
+------------------------------------------------------------
+
+# Verificar reglas
+
+sudo iptables -L -n
+
+------------------------------------------------------------
+
+# PRUEBAS DESPUÉS DE BLOQUEAR
+
+# HTTP:
+# No debe abrir en navegador
+
+# SSH:
+ssh usuario@IP_DEL_SERVIDOR
+# Debe fallar
+
+# FTP:
+ftp IP_DEL_SERVIDOR
+# Debe mostrar error:
+# Connection refused
+
+------------------------------------------------------------
+
+# VOLVER A HABILITAR PUERTOS
+
+sudo iptables -D INPUT -p tcp --dport 80 -j REJECT
+sudo iptables -D INPUT -p tcp --dport 21 -j REJECT
+sudo iptables -D INPUT -p tcp --dport 22 -j REJECT
+
+------------------------------------------------------------
+
+# PRUEBAS DESPUÉS DE HABILITAR
+
+# HTTP:
+# Debe abrir nuevamente
+
+# SSH:
+# Debe conectar
+
+# FTP:
+ftp IP_DEL_SERVIDOR
+# Debe volver a conectar
+
+------------------------------------------------------------
+# PARTE 2: FIREWALL-CMD
+------------------------------------------------------------
+
+# Iniciar firewalld
+
+sudo systemctl start firewalld
+
+------------------------------------------------------------
+
+# HABILITAR SERVICIOS
+
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=ftp
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload
+
+------------------------------------------------------------
+
+# BLOQUEAR SERVICIOS
+
+sudo firewall-cmd --permanent --remove-service=http
+sudo firewall-cmd --permanent --remove-service=ftp
+sudo firewall-cmd --permanent --remove-service=ssh
+sudo firewall-cmd --reload
+
+------------------------------------------------------------
+
+# PRUEBAS DESPUÉS DE BLOQUEAR
+
+# HTTP:
+# No abre
+
+# SSH:
+# No conecta
+
+# FTP:
+ftp IP_DEL_SERVIDOR
+# Debe fallar
+
+------------------------------------------------------------
+
+# VOLVER A HABILITAR SERVICIOS
+
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=ftp
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload
+
+------------------------------------------------------------
+
+# PRUEBAS FINALES
+
+# HTTP:
+# Funciona
+
+# SSH:
+# Funciona
+
+# FTP:
+ftp IP_DEL_SERVIDOR
+# Funciona
+
+------------------------------------------------------------
+
+# NOTAS IMPORTANTES
+
+# - FTP usa el puerto 21
+# - Si bloqueas ese puerto → no conecta
+# - Esto demuestra que el firewall funciona correctamente
+
+------------------------------------------------------------
